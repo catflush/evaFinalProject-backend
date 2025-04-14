@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import Event from '../models/Event.js';
 import Service from '../models/Service.js';
+import Workshop from '../models/Workshop.js';
 import ErrorResponse from '../utils/errorResponse.js';
 
 // Get all bookings
@@ -14,6 +15,7 @@ export const getBookings = async (req, res) => {
       .populate('user', 'firstName lastName email')
       .populate('event', 'title date location capacity')
       .populate('service', 'title description level price duration')
+      .populate('workshop', 'title date time duration maxParticipants price')
       .sort({ bookingDate: -1 });
     
     res.status(200).json({
@@ -36,7 +38,8 @@ export const getBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
       .populate('user', 'firstName lastName email')
       .populate('event', 'title date location capacity')
-      .populate('service', 'title description level price duration');
+      .populate('service', 'title description level price duration')
+      .populate('workshop', 'title date time duration maxParticipants price');
     
     if (!booking) {
       return res.status(404).json({
@@ -73,6 +76,7 @@ export const createBooking = async (req, res) => {
       bookingType,
       serviceId,
       eventId,
+      workshopId,
       date,
       time,
       numberOfParticipants,
@@ -122,6 +126,35 @@ export const createBooking = async (req, res) => {
       
       bookingEntity = event;
       totalPrice = event.price * (numberOfParticipants || 1);
+    } else if (bookingType === 'workshop') {
+      // Check if workshop exists
+      const workshop = await Workshop.findById(workshopId);
+      if (!workshop) {
+        return res.status(404).json({
+          success: false,
+          error: 'Workshop not found'
+        });
+      }
+      
+      // Check if workshop has available capacity
+      if (workshop.participants.length >= workshop.maxParticipants) {
+        return res.status(400).json({
+          success: false,
+          error: 'Workshop is fully booked'
+        });
+      }
+      
+      // Check if user is already registered
+      if (workshop.participants.includes(req.user._id)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Already registered for this workshop'
+        });
+      }
+      
+      bookingEntity = workshop;
+      totalPrice = workshop.price;
+      duration = workshop.duration;
     } else {
       return res.status(400).json({
         success: false,
@@ -148,8 +181,18 @@ export const createBooking = async (req, res) => {
     await booking.populate('user', 'firstName lastName email');
     if (bookingType === 'event') {
       await booking.populate('event', 'title date location capacity');
-    } else {
+    } else if (bookingType === 'service') {
       await booking.populate('service', 'title description level price duration');
+    } else {
+      await booking.populate('workshop', 'title date time duration maxParticipants price');
+    }
+
+    // If it's a workshop booking, add the user to workshop participants
+    if (bookingType === 'workshop') {
+      await Workshop.findByIdAndUpdate(
+        workshopId,
+        { $push: { participants: req.user._id } }
+      );
     }
 
     res.status(201).json({
@@ -224,8 +267,10 @@ export const updateBooking = async (req, res) => {
     await booking.populate('user', 'firstName lastName email');
     if (booking.bookingType === 'event') {
       await booking.populate('event', 'title date location capacity');
-    } else {
+    } else if (booking.bookingType === 'service') {
       await booking.populate('service', 'title description level price duration');
+    } else {
+      await booking.populate('workshop', 'title date time duration maxParticipants price');
     }
 
     res.status(200).json({
@@ -260,14 +305,20 @@ export const deleteBooking = async (req, res) => {
         error: 'Not authorized to delete this booking'
       });
     }
-    
-    // Soft delete by setting isActive to false
-    booking.isActive = false;
-    await booking.save();
 
+    // If it's a workshop booking, remove the user from workshop participants
+    if (booking.bookingType === 'workshop') {
+      await Workshop.findByIdAndUpdate(
+        booking.workshop,
+        { $pull: { participants: booking.user } }
+      );
+    }
+    
+    await booking.remove();
+    
     res.status(200).json({
       success: true,
-      data: booking
+      data: {}
     });
   } catch (err) {
     console.error('Error deleting booking:', err);

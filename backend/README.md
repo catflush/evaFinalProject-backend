@@ -1,19 +1,24 @@
 # Maker.io Backend API
 
-A comprehensive RESTful API for Maker.io, a makerspace platform that enables users to access tools, workshops, and learning resources.
+A comprehensive RESTful API for Maker.io, a makerspace platform that enables users to book services, events for learning resources inside Community.
 
 ## Features
 
+### Mandatory
 - User authentication and authorization
-- Workshop and event management
+- Workshop/ event management by User and Admin
 - Service booking system
-- Equipment and tool management
-- Learning path tracking
+- Post Content System
 - File upload and management
 - Role-based access control
 - Real-time notifications
-- Payment integration
+
 - Analytics and reporting
+
+### Optional (nice-to-have-ideas)
+- Equipment and tool management
+- Learning path tracking
+- Payment integration
 
 ## Tech Stack
 
@@ -43,14 +48,15 @@ A comprehensive RESTful API for Maker.io, a makerspace platform that enables use
 - `PUT /users/:id` - Update a specific user
 - `DELETE /users/:id` - Delete a specific user (admin only)
 
-### Workshop & Event Routes (`/workshops`)
+### Event Routes (`/events`)
 
-- `GET /workshops` - Get all workshops
-- `GET /workshops/upcoming` - Get upcoming workshops
-- `GET /workshops/:id` - Get a specific workshop
-- `POST /workshops` - Create a new workshop (admin only)
-- `PUT /workshops/:id` - Update a specific workshop (admin only)
-- `DELETE /workshops/:id` - Delete a specific workshop (admin only)
+- `GET /events` - Get all events
+- `GET /events/upcoming` - Get upcoming events
+- `GET /events/:id` - Get a specific events
+- `POST /events` - Create a new events (admin only)
+- `PUT /events/:id` - Update a specific events (admin only)
+- `DELETE /events/:id` - Delete a specific events (admin only)
+events
 
 ### Service Routes (`/services`)
 
@@ -60,13 +66,6 @@ A comprehensive RESTful API for Maker.io, a makerspace platform that enables use
 - `PUT /services/:id` - Update a specific service (admin only)
 - `DELETE /services/:id` - Delete a specific service (admin only)
 
-### Equipment Routes (`/equipment`)
-
-- `GET /equipment` - Get all equipment
-- `GET /equipment/:id` - Get a specific equipment
-- `POST /equipment` - Create new equipment (admin only)
-- `PUT /equipment/:id` - Update specific equipment (admin only)
-- `DELETE /equipment/:id` - Delete specific equipment (admin only)
 
 ### Booking Routes (`/bookings`)
 
@@ -129,17 +128,14 @@ The API uses JWT (JSON Web Tokens) for authentication. To access protected route
 {
   "title": "3D Printing Basics",
   "description": "Learn the fundamentals of 3D printing",
-  "instructor": "instructor_id",
   "date": "2024-04-15",
   "time": "14:00",
   "duration": "2 hours",
   "maxParticipants": 10,
   "price": 99.99,
-  "equipment": ["3d_printer_1", "3d_printer_2"],
-  "materials": ["PLA filament", "Support material"],
-  "prerequisites": ["Basic computer skills"],
   "attachments": [
     {
+      "image":"workshop.jpg"
       "filename": "workshop-outline.pdf",
       "path": "uploads/workshops/outline.pdf"
     }

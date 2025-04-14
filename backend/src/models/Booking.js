@@ -8,7 +8,7 @@ const bookingSchema = new mongoose.Schema({
   },
   bookingType: {
     type: String,
-    enum: ['event', 'service'],
+    enum: ['event', 'service', 'workshop'],
     required: [true, 'Booking type is required']
   },
   event: {
@@ -29,6 +29,16 @@ const bookingSchema = new mongoose.Schema({
         return this.bookingType !== 'service' || v != null;
       },
       message: 'Service ID is required for service bookings'
+    }
+  },
+  workshop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workshop',
+    validate: {
+      validator: function(v) {
+        return this.bookingType !== 'workshop' || v != null;
+      },
+      message: 'Workshop ID is required for workshop bookings'
     }
   },
   date: {
@@ -101,7 +111,7 @@ const bookingSchema = new mongoose.Schema({
   duration: {
     type: String,
     required: function() {
-      return this.bookingType === 'service';
+      return this.bookingType === 'service' || this.bookingType === 'workshop';
     }
   }
 }, {
@@ -112,16 +122,19 @@ const bookingSchema = new mongoose.Schema({
 bookingSchema.index({ user: 1, bookingType: 1 });
 bookingSchema.index({ event: 1 });
 bookingSchema.index({ service: 1 });
+bookingSchema.index({ workshop: 1 });
 bookingSchema.index({ date: 1 });
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ paymentStatus: 1 });
 
-// Add validation to ensure either event or service is provided based on bookingType
+// Add validation to ensure the correct entity is provided based on bookingType
 bookingSchema.pre('save', function(next) {
   if (this.bookingType === 'event' && !this.event) {
     next(new Error('Event ID is required for event bookings'));
   } else if (this.bookingType === 'service' && !this.service) {
     next(new Error('Service ID is required for service bookings'));
+  } else if (this.bookingType === 'workshop' && !this.workshop) {
+    next(new Error('Workshop ID is required for workshop bookings'));
   } else {
     next();
   }

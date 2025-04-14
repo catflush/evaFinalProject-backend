@@ -173,21 +173,31 @@ export const updateEvent = async (req, res) => {
     }
 
     // Handle file uploads if present
-    let attachments = [...existingEvent.attachments];
+    let updateData = { ...value };
     if (req.files && req.files.length > 0) {
-      const newAttachments = req.files.map(file => ({
+      // Delete old attachments if they exist
+      if (existingEvent.attachments && existingEvent.attachments.length > 0) {
+        existingEvent.attachments.forEach(attachment => {
+          const filePath = attachment.path;
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        });
+      }
+
+      // Add new attachments
+      updateData.attachments = req.files.map(file => ({
         filename: file.originalname,
         path: file.path,
         mimetype: file.mimetype,
         size: file.size
       }));
-      attachments = [...attachments, ...newAttachments];
     }
 
-    // Update event with new attachments
+    // Update event
     const event = await Event.findByIdAndUpdate(
       req.params.id, 
-      { ...value, attachments },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -196,6 +206,7 @@ export const updateEvent = async (req, res) => {
       data: event
     });
   } catch (err) {
+    console.error('Error updating event:', err);
     if (err.name === 'ValidationError') {
       const messages = Object.values(err.errors).map(val => val.message);
       return res.status(400).json({

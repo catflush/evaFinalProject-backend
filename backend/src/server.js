@@ -15,6 +15,7 @@ import serviceRoutes from './routes/serviceRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import postRoutes from './routes/postRoutes.js';
+import workshopRoutes from './routes/workshopRoutes.js';
 import fs from 'fs';
 
 // Get the directory name
@@ -53,6 +54,7 @@ app.use('/bookings', bookingRoutes);
 app.use('/services', serviceRoutes);
 app.use('/analytics', analyticsRoutes);
 app.use('/posts', postRoutes);
+app.use('/workshops', workshopRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
