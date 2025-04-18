@@ -307,24 +307,37 @@ export const deleteBooking = async (req, res) => {
     }
 
     // If it's a workshop booking, remove the user from workshop participants
-    if (booking.bookingType === 'workshop') {
-      await Workshop.findByIdAndUpdate(
-        booking.workshop,
-        { $pull: { participants: booking.user } }
-      );
+    if (booking.bookingType === 'workshop' && booking.workshop) {
+      try {
+        await Workshop.findByIdAndUpdate(
+          booking.workshop,
+          { $pull: { participants: booking.user } }
+        );
+      } catch (workshopError) {
+        console.error('Error removing user from workshop participants:', workshopError);
+        // Continue with booking deletion even if workshop update fails
+      }
     }
     
-    await booking.remove();
+    // Delete the booking
+    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
+    
+    if (!deletedBooking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Booking not found'
+      });
+    }
     
     res.status(200).json({
       success: true,
-      data: {}
+      data: { id: deletedBooking._id }
     });
   } catch (err) {
     console.error('Error deleting booking:', err);
     res.status(500).json({
       success: false,
-      error: 'Server Error'
+      error: err.message || 'Server Error'
     });
   }
 }; 

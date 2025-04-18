@@ -2,13 +2,14 @@ import express from 'express';
 import {
   getPosts,
   createPost,
-  likePost,
-  addComment,
   updatePost,
-  deletePost
+  deletePost,
+  likePost,
 } from '../controllers/postController.js';
 import { authenticate } from '../middleware/authenticate.js';
 import upload from '../middleware/upload.js';
+
+
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get('/', getPosts);
  * @desc    Create a new post
  * @access  Private
  */
-router.post('/', authenticate, upload.single('image'), createPost);
+router.post('/',authenticate, upload.single('image'), createPost);
 
 /**
  * @route   PUT /api/posts/:id
@@ -38,20 +39,13 @@ router.put('/:id', authenticate, upload.single('image'), updatePost);
  * @desc    Delete a post
  * @access  Private
  */
-router.delete('/:id', authenticate, deletePost);
+router.delete('/:id', authenticate,deletePost);
 
 /**
  * @route   POST /api/posts/:id/like
  * @desc    Like a post
  * @access  Private
  */
-router.post('/:id/like', authenticate, likePost);
-
-/**
- * @route   POST /api/posts/:id/comments
- * @desc    Add a comment to a post
- * @access  Private
- */
-router.post('/:id/comments', authenticate, addComment);
+router.post('/:id/like',authenticate, likePost);
 
 export default router; 

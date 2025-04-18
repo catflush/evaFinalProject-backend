@@ -44,21 +44,21 @@ router.get('/:id', getEvent);
 /**
  * @route   POST /events
  * @desc    Create a new event
- * @access  Private
+ * @access  Private (Admin only)
  */
-router.post('/', authenticate, upload.array('attachments', 5), createEvent);
+router.post('/', authenticate, isAuthenticated, upload.single('image'), createEvent);
 
 /**
  * @route   PUT /events/:id
  * @desc    Update a specific event
- * @access  Private
+ * @access  Private (Admin only)
  */
-router.put('/:id', authenticate, isAuthenticated, upload.array('attachments', 5), updateEvent);
+router.put('/:id', authenticate, isAuthenticated, upload.single('image'), updateEvent);
 
 /**
  * @route   DELETE /events/:id
  * @desc    Delete a specific event
- * @access  Private
+ * @access  Private (Admin only)
  */
 router.delete('/:id', authenticate, isAuthenticated, deleteEvent);
 

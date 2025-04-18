@@ -1,0 +1,14 @@
+{
+  "folders": [
+	{
+		"path": "../../../evaProject-backend"
+	},
+	{
+		"path": "."
+	}
+],
+  "settings": {
+    "liveServer.settings.multiRootWorkspaceName": "evaProject",
+    "liveServer.settings.port": 5501
+  }
+}

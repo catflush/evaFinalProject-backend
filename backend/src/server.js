@@ -25,24 +25,82 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Created uploads directory:', uploadsDir);
+}
+
+// Create posts directory if it doesn't exist
+const postsDir = path.join(uploadsDir, 'posts');
+if (!fs.existsSync(postsDir)) {
+  fs.mkdirSync(postsDir, { recursive: true });
+  console.log('Created posts directory:', postsDir);
+}
+
+// Create events directory if it doesn't exist
+const eventsUploadDir = path.join(uploadsDir, 'events');
+if (!fs.existsSync(eventsUploadDir)) {
+  fs.mkdirSync(eventsUploadDir, { recursive: true });
+  console.log('Created events directory:', eventsUploadDir);
+}
+
+// Create workshop directory if it doesn't exist
+const workshopsUploadDir = path.join(uploadsDir, 'workshops');
+if (!fs.existsSync(workshopsUploadDir)) {
+  fs.mkdirSync(workshopsUploadDir, { recursive: true });
+  console.log('Created workshops directory:', workshopsUploadDir);
+}
+
+// Create services directory if it doesn't exist
+const servicesUploadDir = path.join(uploadsDir, 'services');
+if (!fs.existsSync(servicesUploadDir)) {
+  fs.mkdirSync(servicesUploadDir, { recursive: true });
+  console.log('Created services directory:', servicesUploadDir);
+}
+
 const app = express();
 const port = process.env.PORT || 5000;
 
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://eva-project-frontend.onrender.com'  // Add your frontend URL here
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, path) => {
+    // Set CORS headers for static files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    // Cache control headers
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString());
+  },
+  maxAge: '1y',
+  etag: true,
+  lastModified: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
-app.use('/uploads/posts', express.static(path.join(__dirname, '../../uploads/posts')));
-app.use('/uploads/services', express.static(path.join(__dirname, '../../uploads/services')));
 
 // Routes
 app.use('/auth', userAuthRoutes);
@@ -64,10 +122,12 @@ app.get('/', (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('MongoDB connection error:', error));
-
 // Start server
-app.listen(port, () => console.log(`Server is running on port ${port}`));
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  console.log('Uploads directory:', uploadsDir);
+  console.log('Posts directory:', postsDir);
+  console.log('Events directory:', eventsUploadDir);
+  console.log('Workshops directory:', workshopsUploadDir);
+  console.log('Services directory:', servicesUploadDir);
+});

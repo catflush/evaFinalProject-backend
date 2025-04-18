@@ -1,0 +1,42 @@
+services:
+  # Backend service
+  - type: web
+    name: eva-project-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromDatabase:
+          name: eva-project-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 5000
+    healthCheckPath: /
+    autoDeploy: true
+
+  # Frontend service
+  - type: web
+    name: eva-project-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://evafinalproject-1-backend.onrender.com
+      - key: PORT
+        value: 3000
+    healthCheckPath: /
+    autoDeploy: true
+
+databases:
+  - name: eva-project-db
+    databaseName: eva_project
+    user: eva_project_user
+    plan: free 

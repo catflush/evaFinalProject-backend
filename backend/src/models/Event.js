@@ -46,6 +46,10 @@ const eventSchema = new mongoose.Schema({
     ref: 'Category',
     required: false
   },
+  image: {
+    type: String,
+    required: false
+  },
   attachments: [{
     filename: {
       type: String,

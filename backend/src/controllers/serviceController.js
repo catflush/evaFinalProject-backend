@@ -14,29 +14,6 @@ const getFilePath = (relativePath) => {
   return path.join(__dirname, '../../', cleanPath);
 };
 
-// Helper function to log file paths
-const logFileInfo = (file, operation) => {
-  console.log(`\n=== ${operation} File Info ===`);
-  console.log('Original filename:', file.originalname);
-  console.log('Generated filename:', file.filename);
-  console.log('Mimetype:', file.mimetype);
-  console.log('Size:', file.size, 'bytes');
-  console.log('Path:', file.path);
-  console.log('Destination:', file.destination);
-  console.log('=====================\n');
-};
-
-// Helper function to log directory info
-const logDirectoryInfo = (dirPath) => {
-  console.log(`\n=== Directory Info ===`);
-  console.log('Directory path:', dirPath);
-  console.log('Directory exists:', fs.existsSync(dirPath));
-  if (fs.existsSync(dirPath)) {
-    console.log('Directory contents:', fs.readdirSync(dirPath));
-  }
-  console.log('=====================\n');
-};
-
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads/services');
 if (!fs.existsSync(uploadsDir)) {
@@ -47,15 +24,6 @@ if (!fs.existsSync(uploadsDir)) {
 export const getServices = async (req, res) => {
   try {
     const services = await Service.find().populate('categoryId', 'name');
-    
-    // Log attachment paths for each service
-    services.forEach(service => {
-      console.log(`\n=== Service ${service._id} Attachments ===`);
-      service.attachments.forEach(attachment => {
-        console.log('Attachment path:', attachment.path);
-        console.log('Full path:', getFilePath(attachment.path));
-      });
-    });
     
     res.status(200).json({
       success: true,
@@ -101,14 +69,6 @@ export const createService = async (req, res) => {
   try {
     const { title, description, price, duration, level, categoryId, isActive } = req.body;
     
-    // Log directory info before processing files
-    logDirectoryInfo(uploadsDir);
-    
-    // Log each uploaded file
-    if (req.files && req.files.length > 0) {
-      req.files.forEach(file => logFileInfo(file, 'Upload'));
-    }
-    
     // Create service with attachments
     const service = new Service({
       title,
@@ -118,24 +78,15 @@ export const createService = async (req, res) => {
       level,
       categoryId,
       isActive,
-      attachments: req.files?.map(file => {
-        const attachment = {
-          filename: file.originalname,
-          path: `services/${file.filename}`, // Store relative path without 'uploads' prefix
-          mimetype: file.mimetype,
-          size: file.size
-        };
-        console.log('Created attachment:', attachment);
-        return attachment;
-      }) || []
+      attachments: req.files?.map(file => ({
+        filename: file.originalname,
+        path: `services/${file.filename}`,
+        mimetype: file.mimetype,
+        size: file.size
+      })) || []
     });
 
     await service.save();
-    
-    // Log the created service
-    console.log('\n=== Created Service ===');
-    console.log('Service ID:', service._id);
-    console.log('Attachments:', service.attachments);
     
     res.status(201).json({
       success: true,
@@ -162,19 +113,11 @@ export const updateService = async (req, res) => {
       });
     }
     
-    // Log existing attachments
-    console.log('\n=== Existing Attachments ===');
-    service.attachments.forEach(attachment => {
-      console.log('Attachment path:', attachment.path);
-      console.log('Full path:', getFilePath(attachment.path));
-    });
-    
     // Handle file uploads
     const attachments = [...service.attachments];
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
-        logFileInfo(file, 'Update');
-        const filePath = `services/${file.filename}`; // Store relative path without 'uploads' prefix
+        const filePath = `services/${file.filename}`;
         attachments.push({
           filename: file.originalname,
           path: filePath,
@@ -194,11 +137,6 @@ export const updateService = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('categoryId', 'name');
     
-    // Log updated service
-    console.log('\n=== Updated Service ===');
-    console.log('Service ID:', service._id);
-    console.log('Attachments:', service.attachments);
-    
     res.status(200).json({
       success: true,
       data: service
@@ -207,7 +145,7 @@ export const updateService = async (req, res) => {
     console.error('Error updating service:', err);
     res.status(500).json({
       success: false,
-      error: err.message || 'Server Error'
+      error: 'Server Error'
     });
   }
 };
@@ -224,18 +162,15 @@ export const deleteService = async (req, res) => {
       });
     }
     
-    // Log attachments to be deleted
-    console.log('\n=== Deleting Service Attachments ===');
-    service.attachments.forEach(attachment => {
-      const filePath = getFilePath(attachment.path);
-      console.log('Deleting file:', filePath);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log('File deleted successfully');
-      } else {
-        console.log('File not found');
-      }
-    });
+    // Delete attachments
+    if (service.attachments && service.attachments.length > 0) {
+      service.attachments.forEach(attachment => {
+        const filePath = getFilePath(attachment.path);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
+    }
     
     await service.remove();
     
@@ -252,7 +187,7 @@ export const deleteService = async (req, res) => {
   }
 };
 
-// Delete attachment from service
+// Delete attachment
 export const deleteAttachment = async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -265,7 +200,6 @@ export const deleteAttachment = async (req, res) => {
     }
     
     const attachment = service.attachments.id(req.params.attachmentId);
-    
     if (!attachment) {
       return res.status(404).json({
         success: false,
@@ -273,19 +207,19 @@ export const deleteAttachment = async (req, res) => {
       });
     }
     
-    // Delete file from filesystem
+    // Delete the file
     const filePath = getFilePath(attachment.path);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
     
-    // Remove attachment from service
+    // Remove the attachment from the service
     attachment.remove();
     await service.save();
     
     res.status(200).json({
       success: true,
-      data: service
+      data: {}
     });
   } catch (err) {
     console.error('Error deleting attachment:', err);

@@ -1,4 +1,8 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import {
   getAllWorkshops,
   getWorkshop,
@@ -8,12 +12,49 @@ import {
   getUpcomingWorkshops,
   getHostedWorkshops,
   registerForWorkshop,
-  cancelRegistration
+  cancelRegistration,
+  deleteAttachment
 } from '../controllers/workshopController.js';
 import { authenticate, isAuthenticated } from '../middleware/authenticate.js';
-import upload from '../utils/multerConfig.js';
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Create uploads directory if it doesn't exist
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+const WORKSHOPS_UPLOADS_DIR = path.join(UPLOADS_DIR, 'workshops');
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR);
+}
+if (!fs.existsSync(WORKSHOPS_UPLOADS_DIR)) {
+  fs.mkdirSync(WORKSHOPS_UPLOADS_DIR);
+}
+
+// Configure multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, WORKSHOPS_UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept images only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+});
 
 /**
  * @route   GET /workshops
@@ -48,21 +89,21 @@ router.get('/:id', getWorkshop);
  * @desc    Create a new workshop
  * @access  Private (Admin only)
  */
-router.post('/', authenticate, isAuthenticated, upload.array('attachments', 5), createWorkshop);
+router.post('/', authenticate, upload.array('attachments', 5), createWorkshop);
 
 /**
  * @route   PUT /workshops/:id
  * @desc    Update a specific workshop
  * @access  Private (Admin only)
  */
-router.put('/:id', authenticate, isAuthenticated, upload.array('attachments', 5), updateWorkshop);
+router.put('/:id', authenticate, upload.array('attachments', 5), updateWorkshop);
 
 /**
  * @route   DELETE /workshops/:id
  * @desc    Delete a specific workshop
  * @access  Private (Admin only)
  */
-router.delete('/:id', authenticate, isAuthenticated, deleteWorkshop);
+router.delete('/:id', authenticate, deleteWorkshop);
 
 /**
  * @route   POST /workshops/:id/register
@@ -77,5 +118,7 @@ router.post('/:id/register', authenticate, registerForWorkshop);
  * @access  Private
  */
 router.delete('/:id/register', authenticate, cancelRegistration);
+
+router.delete('/:id/attachments/:attachmentId', authenticate, deleteAttachment);
 
 export default router; 

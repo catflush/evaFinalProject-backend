@@ -2,6 +2,7 @@ import Analytics from '../models/Analytics.js';
 import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
 import Event from '../models/Event.js';
+import Workshop from '../models/Workshop.js';
 import Category from '../models/Category.js';
 
 // Helper function to calculate analytics
@@ -20,6 +21,10 @@ const calculateAnalytics = async () => {
     // Get all events
     const events = await Event.find();
     console.log(`Found ${events.length} events`);
+    
+    // Get all workshops
+    const workshops = await Workshop.find();
+    console.log(`Found ${workshops.length} workshops`);
     
     // Get all categories
     const categories = await Category.find();
@@ -75,6 +80,34 @@ const calculateAnalytics = async () => {
     };
     console.log('Calculated event stats:', eventStats);
 
+    // Calculate workshop statistics
+    const workshopStats = {
+      total: workshops.length,
+      upcoming: workshops.filter(w => new Date(w.date) > new Date() && w.status === 'upcoming').length,
+      ongoing: workshops.filter(w => w.status === 'ongoing').length,
+      completed: workshops.filter(w => w.status === 'completed').length,
+      cancelled: workshops.filter(w => w.status === 'cancelled').length,
+      byLevel: {
+        beginner: workshops.filter(w => w.level === 'beginner').length,
+        intermediate: workshops.filter(w => w.level === 'intermediate').length,
+        expert: workshops.filter(w => w.level === 'expert').length
+      },
+      byCategory: await Promise.all(categories.map(async (category) => {
+        const categoryWorkshops = workshops.filter(w => w.categoryId?.toString() === category._id.toString());
+        return {
+          categoryId: category._id,
+          name: category.name,
+          count: categoryWorkshops.length
+        };
+      })),
+      totalParticipants: workshops.reduce((sum, workshop) => sum + workshop.participants.length, 0),
+      averageParticipants: workshops.length > 0 
+        ? workshops.reduce((sum, workshop) => sum + workshop.participants.length, 0) / workshops.length 
+        : 0,
+      revenue: workshops.reduce((sum, workshop) => sum + (workshop.price * workshop.participants.length), 0)
+    };
+    console.log('Calculated workshop stats:', workshopStats);
+
     // Create or update analytics document
     const analytics = await Analytics.findOneAndUpdate(
       {},
@@ -83,6 +116,7 @@ const calculateAnalytics = async () => {
         revenue: revenueStats,
         services: serviceStats,
         events: eventStats,
+        workshops: workshopStats,
         lastUpdated: new Date()
       },
       { upsert: true, new: true }

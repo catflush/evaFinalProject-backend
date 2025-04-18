@@ -7,16 +7,25 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads/posts');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Define the base uploads directory
+const BASE_UPLOADS_DIR = path.join(__dirname, '../../uploads');
+const POSTS_UPLOADS_DIR = path.join(BASE_UPLOADS_DIR, 'posts');
+
+// Create uploads directories if they don't exist
+if (!fs.existsSync(BASE_UPLOADS_DIR)) {
+  fs.mkdirSync(BASE_UPLOADS_DIR, { recursive: true });
+  console.log('Created base uploads directory:', BASE_UPLOADS_DIR);
+}
+
+if (!fs.existsSync(POSTS_UPLOADS_DIR)) {
+  fs.mkdirSync(POSTS_UPLOADS_DIR, { recursive: true });
+  console.log('Created posts uploads directory:', POSTS_UPLOADS_DIR);
 }
 
 // Configure storage for post images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    cb(null, POSTS_UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     // Get current date and time
