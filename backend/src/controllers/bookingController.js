@@ -15,7 +15,7 @@ export const getBookings = async (req, res) => {
       .populate('user', 'firstName lastName email')
       .populate('event', 'title date location capacity')
       .populate('service', 'title description level price duration')
-      .populate('workshop', 'title date time duration maxParticipants price')
+      .populate('workshop', 'title date time location duration maxParticipants price level instructor')
       .sort({ bookingDate: -1 });
     
     res.status(200).json({
@@ -136,24 +136,35 @@ export const createBooking = async (req, res) => {
         });
       }
       
-      // Check if workshop has available capacity
-      if (workshop.participants.length >= workshop.maxParticipants) {
-        return res.status(400).json({
-          success: false,
-          error: 'Workshop is fully booked'
-        });
-      }
+      // Check if user is already registered for this workshop
+      const existingBooking = await Booking.findOne({ 
+        workshop: workshopId,
+        user: req.user._id,
+        status: { $in: ['pending', 'confirmed'] }
+      });
       
-      // Check if user is already registered
-      if (workshop.participants.includes(req.user._id)) {
+      if (existingBooking) {
         return res.status(400).json({
           success: false,
           error: 'Already registered for this workshop'
         });
       }
       
+      // Check if workshop has available capacity
+      const currentBookings = await Booking.countDocuments({ 
+        workshop: workshopId, 
+        status: { $in: ['pending', 'confirmed'] } 
+      });
+      
+      if (currentBookings + (numberOfParticipants || 1) > workshop.maxParticipants) {
+        return res.status(400).json({
+          success: false,
+          error: 'Workshop is fully booked'
+        });
+      }
+      
       bookingEntity = workshop;
-      totalPrice = workshop.price;
+      totalPrice = workshop.price * (numberOfParticipants || 1);
       duration = workshop.duration;
     } else {
       return res.status(400).json({
@@ -183,16 +194,8 @@ export const createBooking = async (req, res) => {
       await booking.populate('event', 'title date location capacity');
     } else if (bookingType === 'service') {
       await booking.populate('service', 'title description level price duration');
-    } else {
-      await booking.populate('workshop', 'title date time duration maxParticipants price');
-    }
-
-    // If it's a workshop booking, add the user to workshop participants
-    if (bookingType === 'workshop') {
-      await Workshop.findByIdAndUpdate(
-        workshopId,
-        { $push: { participants: req.user._id } }
-      );
+    } else if (bookingType === 'workshop') {
+      await booking.populate('workshop', 'title date time location duration maxParticipants price level instructor');
     }
 
     res.status(201).json({

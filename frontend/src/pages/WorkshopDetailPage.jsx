@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkshops } from '../context/WorkshopContext';
 import { useUser } from '../context/useUser';
 import { useBookings } from '../context/BookingContext';
-import { FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaTicketAlt, FaClock, FaArrowLeft, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaTicketAlt, FaClock, FaArrowLeft, FaEdit, FaTrash, FaCheckCircle } from 'react-icons/fa';
 import { format, isValid } from 'date-fns';
 import { toast } from 'react-toastify';
 
@@ -14,10 +14,11 @@ const WorkshopDetailPage = () => {
   const navigate = useNavigate();
   const { getWorkshop, deleteWorkshop } = useWorkshops();
   const { user, isAdmin } = useUser();
-  const { createBooking } = useBookings();
+  const { createBooking, getUserBookings } = useBookings();
   const [workshop, setWorkshop] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   useEffect(() => {
     const loadWorkshop = async () => {
@@ -38,6 +39,26 @@ const WorkshopDetailPage = () => {
 
     loadWorkshop();
   }, [workshopId, getWorkshop, navigate]);
+
+  useEffect(() => {
+    const checkRegistration = async () => {
+      if (user) {
+        try {
+          const bookings = await getUserBookings();
+          const isRegisteredForWorkshop = bookings.some(
+            booking => 
+              booking.workshop?._id === workshopId && 
+              ['pending', 'confirmed'].includes(booking.status)
+          );
+          setIsRegistered(isRegisteredForWorkshop);
+        } catch (error) {
+          console.error('Error checking registration:', error);
+        }
+      }
+    };
+
+    checkRegistration();
+  }, [user, workshopId, getUserBookings]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this workshop?')) {
@@ -120,7 +141,7 @@ const WorkshopDetailPage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
         <button
-          onClick={() => navigate('/workshops')}
+          onClick={() => navigate('/dashboard/workshops')}
           className="btn btn-ghost gap-2"
         >
           <FaArrowLeft className="w-4 h-4" />
@@ -218,17 +239,26 @@ const WorkshopDetailPage = () => {
 
           <div className="mt-8 flex justify-end gap-4">
             {user && !isAdmin() && (
-              <button
-                onClick={handleBook}
-                className="btn btn-primary"
-                disabled={bookingLoading}
-              >
-                {bookingLoading ? (
-                  <span className="loading loading-spinner"></span>
+              <>
+                {isRegistered ? (
+                  <div className="flex items-center gap-2 text-success">
+                    <FaCheckCircle className="w-5 h-5" />
+                    <span>Already Registered</span>
+                  </div>
                 ) : (
-                  'Book Workshop'
+                  <button
+                    onClick={handleBook}
+                    className="btn btn-primary"
+                    disabled={bookingLoading}
+                  >
+                    {bookingLoading ? (
+                      <span className="loading loading-spinner"></span>
+                    ) : (
+                      'Book Workshop'
+                    )}
+                  </button>
                 )}
-              </button>
+              </>
             )}
             {isAdmin() && (
               <>

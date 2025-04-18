@@ -113,8 +113,30 @@ export const BookingProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      setBookings(data.data);
-      return data.data;
+      
+      // Process the bookings to ensure workshop data is properly handled
+      const processedBookings = data.data.map(booking => {
+        if (booking.bookingType === 'workshop' && booking.workshop) {
+          return {
+            ...booking,
+            workshop: {
+              ...booking.workshop,
+              title: booking.workshop.title || 'Workshop Title Not Available',
+              date: booking.workshop.date || booking.date,
+              location: booking.workshop.location || 'Location Not Available',
+              capacity: booking.workshop.maxParticipants || 'Capacity Not Available',
+              level: booking.workshop.level || 'Level Not Specified',
+              instructor: booking.workshop.instructor || 'Instructor Not Specified',
+              duration: booking.workshop.duration || 'Duration Not Available',
+              price: booking.workshop.price || 'Price Not Available'
+            }
+          };
+        }
+        return booking;
+      });
+
+      setBookings(processedBookings);
+      return processedBookings;
     } catch (error) {
       setError(error.message);
       showNotification(error.message || 'Failed to fetch bookings', 'error');

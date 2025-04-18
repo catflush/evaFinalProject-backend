@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaCalendarAlt, FaClock, FaUsers, FaMapMarkerAlt, FaEdit, FaTrash, FaTimes, FaGraduationCap, FaUserTie, FaTicketAlt, FaTools } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaUsers, FaMapMarkerAlt, FaEdit, FaTrash, FaTimes, FaGraduationCap, FaUserTie, FaTicketAlt, FaTools, FaCheck, FaHistory } from 'react-icons/fa';
 
 const BookingCard = ({ 
   booking, 
@@ -10,7 +10,8 @@ const BookingCard = ({
   processing,
   getTitle,
   getDetails,
-  getStatusColor
+  getStatusColor,
+  isPast
 }) => {
   const details = getDetails(booking);
   const statusColor = getStatusColor(booking.status);
@@ -45,10 +46,41 @@ const BookingCard = ({
     }
   };
 
+  // Get status badge color and icon
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return {
+          color: 'badge-success',
+          icon: <FaCheck className="w-3 h-3" />,
+          text: 'Confirmed'
+        };
+      case 'pending':
+        return {
+          color: 'badge-warning',
+          icon: <FaClock className="w-3 h-3" />,
+          text: 'Pending'
+        };
+      case 'cancelled':
+        return {
+          color: 'badge-error',
+          icon: <FaTimes className="w-3 h-3" />,
+          text: 'Cancelled'
+        };
+      default:
+        return {
+          color: 'badge-ghost',
+          icon: null,
+          text: status.charAt(0).toUpperCase() + status.slice(1)
+        };
+    }
+  };
+
   const bookingType = getBookingTypeBadge(booking.bookingType);
+  const statusBadge = getStatusBadge(booking.status);
   
   return (
-    <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group">
+    <div className={`card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group ${isPast ? 'opacity-75' : ''}`}>
       <div className="card-body p-6">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1">
@@ -60,9 +92,16 @@ const BookingCard = ({
                 {bookingType.icon}
                 {bookingType.text}
               </div>
-              <div className={`badge ${statusColor} text-white`}>
-                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              <div className={`badge ${statusBadge.color} gap-1 text-white`}>
+                {statusBadge.icon}
+                {statusBadge.text}
               </div>
+              {isPast && (
+                <div className="badge badge-ghost gap-1">
+                  <FaHistory className="w-3 h-3" />
+                  Past
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -122,7 +161,7 @@ const BookingCard = ({
             View Details
           </button>
           
-          {booking.status !== 'cancelled' && (
+          {!isPast && booking.status !== 'cancelled' && (
             <>
               <button 
                 onClick={() => onEdit(booking)} 

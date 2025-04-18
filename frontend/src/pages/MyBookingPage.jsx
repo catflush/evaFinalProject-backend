@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaTrash, FaGraduationCap, FaEye, FaFilter, FaSort, FaTimes, FaEdit } from "react-icons/fa";
+import { FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaTrash, FaGraduationCap, FaEye, FaFilter, FaSort, FaTimes, FaEdit, FaTools, FaHistory } from "react-icons/fa";
 import { useUser } from '../context/useUser';
 import { useBookings } from '../context/BookingContext';
 import { format, isValid } from 'date-fns';
@@ -18,11 +18,12 @@ const MyBookingPage = () => {
     numberOfParticipants: 1,
     notes: ''
   });
-  const [filter, setFilter] = useState('all'); // 'all', 'event', 'service'
+  const [filter, setFilter] = useState('all'); // 'all', 'event', 'service', 'workshop'
   const [sortBy, setSortBy] = useState('date'); // 'date', 'status', 'title'
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const bookingsPerPage = 6;
+  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'upcoming', 'past'
 
   useEffect(() => {
     if (user?._id) {
@@ -181,11 +182,30 @@ const MyBookingPage = () => {
     }
   };
 
+  // Helper function to check if a booking is in the past
+  const isPastBooking = (booking) => {
+    const bookingDate = new Date(booking.date);
+    const now = new Date();
+    return bookingDate < now;
+  };
+
   // Filter and sort bookings
   const filteredAndSortedBookings = bookings
     .filter(booking => {
-      if (filter === 'all') return true;
-      return booking.status === filter;
+      // First filter by type
+      if (filter !== 'all') {
+        const type = booking.bookingType || (booking.service ? 'service' : booking.event ? 'event' : booking.workshop ? 'workshop' : 'unknown');
+        if (type !== filter) return false;
+      }
+
+      // Then filter by time
+      if (timeFilter === 'upcoming') {
+        return !isPastBooking(booking);
+      } else if (timeFilter === 'past') {
+        return isPastBooking(booking);
+      }
+
+      return true;
     })
     .sort((a, b) => {
       const dateA = new Date(a.date);
@@ -256,47 +276,53 @@ const MyBookingPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
-              <label htmlFor="filter" className="text-sm font-medium text-gray-700">
-                Filter:
-              </label>
-              <select
-                id="filter"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h1 className="text-3xl font-bold">My Bookings</h1>
+          <div className="flex flex-wrap gap-2">
+            <div className="join">
+              <button 
+                className={`join-item btn btn-sm ${timeFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setTimeFilter('all')}
               >
-                <option value="all">All</option>
-                <option value="event">Events</option>
-                <option value="workshop">Workshops</option>
-                <option value="service">Services</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="pending">Pending</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+                All Time
+              </button>
+              <button 
+                className={`join-item btn btn-sm ${timeFilter === 'upcoming' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setTimeFilter('upcoming')}
+              >
+                <FaCalendarAlt className="mr-1" /> Upcoming
+              </button>
+              <button 
+                className={`join-item btn btn-sm ${timeFilter === 'past' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setTimeFilter('past')}
+              >
+                <FaHistory className="mr-1" /> Past
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="sort" className="text-sm font-medium text-gray-700">
-                Sort by:
-              </label>
-              <select
-                id="sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            <div className="join">
+              <button 
+                className={`join-item btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilter('all')}
               >
-                <option value="date">Date</option>
-                <option value="status">Status</option>
-                <option value="title">Title</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-2 rounded-md hover:bg-gray-100"
+                All
+              </button>
+              <button 
+                className={`join-item btn btn-sm ${filter === 'event' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilter('event')}
               >
-                <FaSort className={sortOrder === 'asc' ? 'transform rotate-180' : ''} />
+                <FaTicketAlt className="mr-1" /> Events
+              </button>
+              <button 
+                className={`join-item btn btn-sm ${filter === 'workshop' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilter('workshop')}
+              >
+                <FaGraduationCap className="mr-1" /> Workshops
+              </button>
+              <button 
+                className={`join-item btn btn-sm ${filter === 'service' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilter('service')}
+              >
+                <FaTools className="mr-1" /> Services
               </button>
             </div>
           </div>
@@ -326,9 +352,11 @@ const MyBookingPage = () => {
                 onCancel={() => handleCancelBooking(booking._id)}
                 onDelete={() => handleDeleteBooking(booking._id)}
                 onEdit={() => handleEditClick(booking)}
+                processing={processing}
                 getTitle={getBookingTitle}
                 getDetails={getBookingDetails}
                 getStatusColor={getStatusBadgeColor}
+                isPast={isPastBooking(booking)}
               />
             ))}
           </div>
