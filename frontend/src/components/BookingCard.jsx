@@ -1,35 +1,75 @@
 import React from 'react';
-import { FaCalendarAlt, FaClock, FaUsers, FaMapMarkerAlt, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaUsers, FaMapMarkerAlt, FaEdit, FaTrash, FaTimes, FaGraduationCap, FaUserTie, FaTicketAlt, FaTools } from 'react-icons/fa';
 
 const BookingCard = ({ 
   booking, 
-  onViewDetails, 
+  onView, 
   onEdit, 
   onCancel, 
   onDelete, 
   processing,
-  getBookingTitle,
-  getBookingDetails,
-  getStatusBadgeColor
+  getTitle,
+  getDetails,
+  getStatusColor
 }) => {
-  const details = getBookingDetails(booking);
-  const statusColor = getStatusBadgeColor(booking.status);
+  const details = getDetails(booking);
+  const statusColor = getStatusColor(booking.status);
+  
+  // Get booking type badge color and icon
+  const getBookingTypeBadge = (type) => {
+    switch (type) {
+      case 'event':
+        return {
+          color: 'badge-primary',
+          icon: <FaTicketAlt className="w-3 h-3" />,
+          text: 'Event'
+        };
+      case 'workshop':
+        return {
+          color: 'badge-secondary',
+          icon: <FaGraduationCap className="w-3 h-3" />,
+          text: 'Workshop'
+        };
+      case 'service':
+        return {
+          color: 'badge-accent',
+          icon: <FaTools className="w-3 h-3" />,
+          text: 'Service'
+        };
+      default:
+        return {
+          color: 'badge-ghost',
+          icon: null,
+          text: 'Unknown'
+        };
+    }
+  };
+
+  const bookingType = getBookingTypeBadge(booking.bookingType);
   
   return (
-    <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
-      <div className="card-body p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="card-title text-lg font-bold">{getBookingTitle(booking)}</h3>
-          </div>
-          <div className={`badge ${statusColor} text-white`}>
-            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+    <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group">
+      <div className="card-body p-6">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-1">
+            <h3 className="card-title text-lg font-bold group-hover:text-primary transition-colors duration-300">
+              {getTitle(booking)}
+            </h3>
+            <div className="flex gap-2 mt-2">
+              <div className={`badge ${bookingType.color} gap-1`}>
+                {bookingType.icon}
+                {bookingType.text}
+              </div>
+              <div className={`badge ${statusColor} text-white`}>
+                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              </div>
+            </div>
           </div>
         </div>
         
-        <div className="divider my-2"></div>
+        <div className="divider my-3"></div>
         
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
             <FaCalendarAlt className="text-primary" />
             <span>{details.date}</span>
@@ -48,11 +88,24 @@ const BookingCard = ({
             </>
           )}
           
-          {booking.bookingType === 'event' && (
+          {(booking.bookingType === 'event' || booking.bookingType === 'workshop') && (
             <div className="flex items-center gap-2">
               <FaMapMarkerAlt className="text-primary" />
               <span>{details.location}</span>
             </div>
+          )}
+          
+          {booking.bookingType === 'workshop' && (
+            <>
+              <div className="flex items-center gap-2">
+                <FaUserTie className="text-primary" />
+                <span>Instructor: {details.instructor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaGraduationCap className="text-primary" />
+                <span>Level: {details.level}</span>
+              </div>
+            </>
           )}
           
           <div className="flex items-center gap-2">
@@ -61,9 +114,9 @@ const BookingCard = ({
           </div>
         </div>
         
-        <div className="card-actions justify-end mt-4">
+        <div className="card-actions justify-end mt-6">
           <button 
-            onClick={() => onViewDetails(booking)} 
+            onClick={() => onView(booking)} 
             className="btn btn-sm btn-primary"
           >
             View Details

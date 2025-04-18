@@ -90,13 +90,15 @@ const MyBookingPage = () => {
   // Helper function to get booking title
   const getBookingTitle = (booking) => {
     // If bookingType is missing, try to infer it from the data
-    const type = booking.bookingType || (booking.service ? 'service' : booking.event ? 'event' : 'unknown');
+    const type = booking.bookingType || (booking.service ? 'service' : booking.event ? 'event' : booking.workshop ? 'workshop' : 'unknown');
     
     switch (type) {
       case 'service':
         return booking.service?.title || 'Service Title Not Available';
       case 'event':
         return booking.event?.title || 'Event Title Not Available';
+      case 'workshop':
+        return booking.workshop?.title || 'Workshop Title Not Available';
       default:
         return 'Unknown Booking Type';
     }
@@ -105,15 +107,15 @@ const MyBookingPage = () => {
   // Helper function to get booking details
   const getBookingDetails = (booking) => {
     // If bookingType is missing, try to infer it from the data
-    const type = booking.bookingType || (booking.service ? 'service' : booking.event ? 'event' : 'unknown');
-    let eventDate, eventLocation, eventDescription;
+    const type = booking.bookingType || (booking.service ? 'service' : booking.event ? 'event' : booking.workshop ? 'workshop' : 'unknown');
+    let eventDate, eventLocation, eventDescription, workshopDate, workshopLocation, workshopDescription;
     
     // Helper function to safely format dates
     const safeFormatDate = (dateString) => {
       if (!dateString) return 'Date not available';
       try {
-    const date = new Date(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid date';
+        const date = new Date(dateString);
+        return isValid(date) ? format(date, 'PPP') : 'Invalid date';
       } catch {
         return 'Invalid date';
       }
@@ -139,6 +141,20 @@ const MyBookingPage = () => {
           date: eventDate,
           participants: booking.numberOfParticipants || 1,
           fullDescription: eventDescription
+        };
+      case 'workshop':
+        workshopDate = safeFormatDate(booking.workshop?.date);
+        workshopLocation = booking.workshop?.location || 'Location not available';
+        workshopDescription = booking.workshop?.description || 'No description available';
+        return {
+          description: `${workshopDate} at ${workshopLocation}`,
+          location: workshopLocation,
+          capacity: booking.workshop?.capacity || 'Capacity not available',
+          date: workshopDate,
+          participants: booking.numberOfParticipants || 1,
+          fullDescription: workshopDescription,
+          level: booking.workshop?.level || 'Level not specified',
+          instructor: booking.workshop?.instructor || 'Instructor not specified'
         };
       default:
         return {
@@ -238,104 +254,116 @@ const MyBookingPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-lg mb-8">
-        <div className="p-6">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">My Bookings</h3>
-          
-          {/* Filter and Sort Controls */}
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex items-center space-x-2">
-              <label htmlFor="filter" className="text-gray-700">Filter by status:</label>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="filter" className="text-sm font-medium text-gray-700">
+                Filter:
+              </label>
               <select
                 id="filter"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="border rounded-md px-3 py-1"
+                className="rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
               >
                 <option value="all">All</option>
-                <option value="pending">Pending</option>
+                <option value="event">Events</option>
+                <option value="workshop">Workshops</option>
+                <option value="service">Services</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="pending">Pending</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <label htmlFor="sortBy" className="text-gray-700">Sort by:</label>
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort" className="text-sm font-medium text-gray-700">
+                Sort by:
+              </label>
               <select
-                id="sortBy"
+                id="sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="border rounded-md px-3 py-1"
+                className="rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
               >
                 <option value="date">Date</option>
                 <option value="status">Status</option>
+                <option value="title">Title</option>
               </select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <label htmlFor="sortOrder" className="text-gray-700">Order:</label>
-              <select
-                id="sortOrder"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="border rounded-md px-3 py-1"
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="p-2 rounded-md hover:bg-gray-100"
               >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
+                <FaSort className={sortOrder === 'asc' ? 'transform rotate-180' : ''} />
+              </button>
             </div>
           </div>
-          
-          {/* Bookings List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedBookings.map(booking => (
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : paginatedBookings.length === 0 ? (
+          <div className="text-center py-12">
+            <FaGraduationCap className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {filter === 'all' 
+                ? "You haven't made any bookings yet."
+                : `No ${filter} bookings found.`}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedBookings.map((booking) => (
               <BookingCard
                 key={booking._id}
                 booking={booking}
-                onViewDetails={() => setSelectedBooking(booking)}
-                onEdit={handleEditClick}
-                onCancel={handleCancelBooking}
-                onDelete={handleDeleteBooking}
-                processing={processing}
-                getBookingTitle={getBookingTitle}
-                getBookingDetails={getBookingDetails}
-                getStatusBadgeColor={getStatusBadgeColor}
+                onView={() => setSelectedBooking(booking)}
+                onCancel={() => handleCancelBooking(booking._id)}
+                onDelete={() => handleDeleteBooking(booking._id)}
+                onEdit={() => handleEditClick(booking)}
+                getTitle={getBookingTitle}
+                getDetails={getBookingDetails}
+                getStatusColor={getStatusBadgeColor}
               />
             ))}
           </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-8">
-              <div className="join">
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-8">
+            <div className="join">
+              <button
+                className="join-item btn btn-sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                «
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
-                  className="join-item btn btn-sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
+                  key={page}
+                  className={`join-item btn btn-sm ${currentPage === page ? 'btn-active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
                 >
-                  «
+                  {page}
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    className={`join-item btn btn-sm ${currentPage === page ? 'btn-active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  className="join-item btn btn-sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  »
-                </button>
-              </div>
+              ))}
+              <button
+                className="join-item btn btn-sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                »
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       
       {/* Booking Details Modal */}
@@ -370,6 +398,8 @@ const MyBookingPage = () => {
                       <div className="flex items-center gap-3">
                         {selectedBooking.bookingType === 'event' ? (
                           <FaMapMarkerAlt className="w-4 h-4 text-primary flex-shrink-0" />
+                        ) : selectedBooking.bookingType === 'workshop' ? (
+                          <FaGraduationCap className="w-4 h-4 text-primary flex-shrink-0" />
                         ) : (
                           <FaGraduationCap className="w-4 h-4 text-primary flex-shrink-0" />
                         )}
